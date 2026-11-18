@@ -1,4 +1,4 @@
-import {Link, useNavigate} from 'react-router-dom'
+import {Link, useLocation, useNavigate} from 'react-router-dom'
 import ThemeToggle from './ThemeToggle.jsx';
 
 
@@ -6,6 +6,11 @@ function NavBar() {
 
 
     const navigate = useNavigate();
+    const {pathname} = useLocation();
+
+    if (pathname === '/login') {
+        return null;
+    }
 
     function logout() {
         localStorage.removeItem('access');

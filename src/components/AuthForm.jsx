@@ -1,188 +1,264 @@
-import React, {useState} from "react";
+import {useState} from "react";
 import {useNavigate} from "react-router-dom";
+import {FiArrowRight, FiEye, FiEyeOff, FiLock, FiMail, FiMusic, FiUser, FiUsers} from "react-icons/fi";
 import {api} from "../api.js";
-import PleaseWait from "./PleaseWait.jsx";
+import churchLogo from "../assets/logo.jpg";
+import "./AuthForm.css";
 
+function getErrorMessage(error) {
+    const data = error.response?.data;
 
-function AuthForm() {
-
-    // const no = '0923963655';
-
-    const [isLogin, setIsLogin] = useState(false);
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [username, setUsername] = useState('');
-    const [firstName, setFirstName] = useState('');
-    const [lastName, setLastName] = useState('');
-    const [loading, setLoading] = useState(false);
-    const navigate = useNavigate();
-
-    function changeMethod() {
-        setIsLogin(!isLogin)
+    if (typeof data === "string") {
+        return data;
     }
 
-    function handleSubmit(e) {
-        e.preventDefault();
-        !isLogin ? login() : register();
+    if (typeof data?.detail === "string") {
+        return data.detail;
     }
 
+    if (data && typeof data === "object") {
+        const message = Object.values(data)
+            .flat()
+            .find((value) => typeof value === "string");
 
-    async function register() {
-        setLoading(true);
-        localStorage.clear()
-        try {
-            const res = await api.post('/users/register/', {
-                first_name: firstName,
-                last_name: lastName,
-                username: username,
-                email: email,
-                password: password
-            })
-            console.log(res)
-            if (res.status === 200) {
-                console.log(res.data)
-                setIsLogin(true)
-            } else {
-                setLoading(false);
-                console.log(res.statusText)
-            }
-
-        } catch (err) {
-            console.log(err);
-            setLoading(false);
+        if (message) {
+            return message;
         }
     }
 
+    return "We couldn't complete your request. Please try again.";
+}
 
-    async function login() {
+function AuthForm() {
+    const [isRegister, setIsRegister] = useState(false);
+    const [username, setUsername] = useState("");
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [firstName, setFirstName] = useState("");
+    const [lastName, setLastName] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [errorMessage, setErrorMessage] = useState("");
+    const [successMessage, setSuccessMessage] = useState("");
+    const navigate = useNavigate();
+
+    function changeMethod() {
+        setIsRegister((current) => !current);
+        setErrorMessage("");
+        setSuccessMessage("");
+    }
+
+    async function handleSubmit(event) {
+        event.preventDefault();
         setLoading(true);
+        setErrorMessage("");
+        setSuccessMessage("");
+
         try {
-            const res = await api.post('api/token/', {
-                username: email,
-                password: password
-            })
-
-            if (res.status === 200) {
-                console.log(res.data)
-
-                localStorage.setItem('access', res.data.access)
-                localStorage.setItem('refresh', res.data.refresh)
-                navigate('/')
-
+            if (isRegister) {
+                await api.post("/users/register/", {
+                    first_name: firstName,
+                    last_name: lastName,
+                    username,
+                    email,
+                    password,
+                });
+                setIsRegister(false);
+                setSuccessMessage("Your account is ready. Sign in with your new username.");
             } else {
-                setLoading(false);
-            }
+                const response = await api.post("api/token/", {
+                    username: username.trim(),
+                    password,
+                });
 
-        } catch (err) {
-            console.log(err);
+                localStorage.setItem("access", response.data.access);
+                localStorage.setItem("refresh", response.data.refresh);
+                navigate("/");
+            }
+        } catch (error) {
+            setErrorMessage(getErrorMessage(error));
+        } finally {
             setLoading(false);
         }
     }
 
     return (
-
-        <div className="column">
-
-            <form className='column  shadow-xl  border mt-5 md:p-2 rounded-2xl border-gray-200 '
-                  onSubmit={handleSubmit}>
-                <h1 className='logo my-4 text-left'>{!isLogin ? 'Login' : 'Register'}</h1>
-
-
-                {
-                    isLogin && <input type="text"
-                                      placeholder='eg. Dagim'
-                                      name='firstName'
-                                      value={firstName}
-                                      onChange={(e) => {
-                                          setFirstName(e.target.value)
-                                      }}
-
-                    />
-                }
-
-                {
-                    isLogin && <input type="text"
-                                      placeholder='eg.Dawit'
-                                      name='lastName'
-                                      value={lastName}
-                                      onChange={(e) => {
-                                          setLastName(e.target.value)
-                                      }}
-
-                    />
-                }
-
-                <input type="text"
-                       placeholder='eg. example123'
-                       name='Username'
-                       value={email}
-                       onChange={(e) => {
-                           setEmail(e.target.value)
-                       }}
-
-                />
-
-
-                {
-                    isLogin && <div>
-                        <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Event
-                            Title</label>
-                        <input
-                            type="text"
-                            name="username"
-                            required
-                            value={email}
-                            onChange={(e) => {
-                                setUsername(e.target.value)
-                            }}
-                            placeholder="e.g., admin"
-                            className="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-slate-800 text-sm"/>
+        <main className="auth-page">
+            <section className="auth-shell" aria-label="Account access">
+                <aside className="auth-brand-panel">
+                    <div className="auth-brand">
+                        <img src={churchLogo} alt="Dato Fares Church" className="auth-brand-logo"/>
+                        <div>
+                            <span className="auth-brand-name">DATO FARES</span>
+                            <span className="auth-brand-caption">WORSHIP MINISTRY</span>
+                        </div>
                     </div>
 
-                }
+                    <div className="auth-brand-copy">
+                        <span className="auth-eyebrow"><FiMusic aria-hidden="true"/> GROW TOGETHER IN WORSHIP</span>
+                        <h1>Your voice<br/>belongs here.</h1>
+                        <p>A home for our choir family to connect, serve, and share the joy of worship.</p>
+                    </div>
 
+                    <div className="auth-community-card">
+                        <div className="auth-community-icon"><FiUsers aria-hidden="true"/></div>
+                        <div>
+                            <strong>One community. One song.</strong>
+                            <span>Stay close to the people and moments that matter.</span>
+                        </div>
+                    </div>
+                    <span className="auth-brand-footer">DATO FARES HEWOT BERHAN CHURCH</span>
+                    <span className="auth-orbit auth-orbit-one" aria-hidden="true"/>
+                    <span className="auth-orbit auth-orbit-two" aria-hidden="true"/>
+                </aside>
 
-                <input type="password"
-                       placeholder='Strong password'
-                       name='password'
-                       value={password}
-                       onChange={(e) => {
-                           setPassword(e.target.value)
-                       }}
+                <div className="auth-form-panel">
+                    <div className="auth-form-content">
+                        <div className="auth-mobile-brand">
+                            <img src={churchLogo} alt="" className="auth-brand-logo"/>
+                            <span>DATO FARES <small>WORSHIP MINISTRY</small></span>
+                        </div>
 
-                />
+                        <span className="auth-form-eyebrow">{isRegister ? "JOIN THE COMMUNITY" : "WELCOME BACK"}</span>
+                        <h2>{isRegister ? "Create your account" : "Good to see you again."}</h2>
+                        <p className="auth-form-intro">
+                            {isRegister
+                                ? "A few details and you’ll be part of the family."
+                                : "Sign in to stay connected with your choir community."}
+                        </p>
 
-                <button className="btn-primary w-[60%] mt-3 p-2" type="submit">
-                    {loading ? <PleaseWait/> : !isLogin ? 'Login' : 'Register'}
+                        <form className="auth-form" onSubmit={handleSubmit}>
+                            {isRegister ? (
+                                <>
+                                    <div className="auth-name-fields">
+                                        <label className="auth-field">
+                                            <span>First name</span>
+                                            <div className="auth-input-wrap">
+                                                <FiUser aria-hidden="true"/>
+                                                <input
+                                                    type="text"
+                                                    name="firstName"
+                                                    autoComplete="given-name"
+                                                    placeholder="Your first name"
+                                                    value={firstName}
+                                                    onChange={(event) => setFirstName(event.target.value)}
+                                                    required
+                                                />
+                                            </div>
+                                        </label>
+                                        <label className="auth-field">
+                                            <span>Last name</span>
+                                            <div className="auth-input-wrap">
+                                                <FiUser aria-hidden="true"/>
+                                                <input
+                                                    type="text"
+                                                    name="lastName"
+                                                    autoComplete="family-name"
+                                                    placeholder="Your last name"
+                                                    value={lastName}
+                                                    onChange={(event) => setLastName(event.target.value)}
+                                                    required
+                                                />
+                                            </div>
+                                        </label>
+                                    </div>
+                                    <label className="auth-field">
+                                        <span>Username</span>
+                                        <div className="auth-input-wrap">
+                                            <FiUser aria-hidden="true"/>
+                                            <input
+                                                type="text"
+                                                name="username"
+                                                autoComplete="username"
+                                                placeholder="Choose a username"
+                                                value={username}
+                                                onChange={(event) => setUsername(event.target.value)}
+                                                required
+                                            />
+                                        </div>
+                                    </label>
+                                    <label className="auth-field">
+                                        <span>Email address</span>
+                                        <div className="auth-input-wrap">
+                                            <FiMail aria-hidden="true"/>
+                                            <input
+                                                type="email"
+                                                name="email"
+                                                autoComplete="email"
+                                                placeholder="you@example.com"
+                                                value={email}
+                                                onChange={(event) => setEmail(event.target.value)}
+                                                required
+                                            />
+                                        </div>
+                                    </label>
+                                </>
+                            ) : (
+                                <label className="auth-field">
+                                    <span>Username</span>
+                                    <div className="auth-input-wrap">
+                                        <FiUser aria-hidden="true"/>
+                                        <input
+                                            type="text"
+                                            name="username"
+                                            autoComplete="username"
+                                            placeholder="Enter your username"
+                                            value={username}
+                                            onChange={(event) => setUsername(event.target.value)}
+                                            required
+                                        />
+                                    </div>
+                                </label>
+                            )}
 
+                            <label className="auth-field">
+                                <span>Password</span>
+                                <div className="auth-input-wrap">
+                                    <FiLock aria-hidden="true"/>
+                                    <input
+                                        type={showPassword ? "text" : "password"}
+                                        name="password"
+                                        autoComplete={isRegister ? "new-password" : "current-password"}
+                                        placeholder={isRegister ? "Create a password" : "Enter your password"}
+                                        value={password}
+                                        onChange={(event) => setPassword(event.target.value)}
+                                        required
+                                    />
+                                    <button
+                                        className="auth-password-toggle"
+                                        type="button"
+                                        onClick={() => setShowPassword((current) => !current)}
+                                        aria-label={showPassword ? "Hide password" : "Show password"}
+                                    >
+                                        {showPassword ? <FiEyeOff aria-hidden="true"/> : <FiEye aria-hidden="true"/>}
+                                    </button>
+                                </div>
+                            </label>
 
-                </button>
+                            {errorMessage && <p className="auth-message auth-error" role="alert">{errorMessage}</p>}
+                            {successMessage && <p className="auth-message auth-success" role="status">{successMessage}</p>}
 
-                <p className='my-3 cursor-pointer' onClick={changeMethod}>
+                            <button className="auth-submit" type="submit" disabled={loading}>
+                                <span>{loading ? "Please wait..." : isRegister ? "Create account" : "Sign in"}</span>
+                                {!loading && <FiArrowRight aria-hidden="true"/>}
+                            </button>
+                        </form>
 
-                    {isLogin ? 'Have already an account? Login' : 'Dont have an account? Register'}
-                </p>
+                        <p className="auth-switch">
+                            {isRegister ? "Already have an account?" : "New to the community?"}
+                            <button type="button" onClick={changeMethod}>
+                                {isRegister ? "Sign in" : "Create an account"}
+                            </button>
+                        </p>
 
-
-                <div className="flex justify-center items-center gap-1 p-5">
-                    <div className="border h-0 w-19 border-gray-200"></div>
-                    <h1 className="text-gray-600 text-center">Log in with</h1>
-                    <div className="border h-0 w-19 border-gray-200"></div>
+                        <div className="auth-form-footer">
+                            <FiLock aria-hidden="true"/>
+                            <span>Your account information is kept private and secure.</span>
+                        </div>
+                    </div>
                 </div>
-                <div className="flex w-full justify-evenly items-center h-30">
-                    <div className="border border-gray-300 shadow-md p-3 rounded-xl">
-                        <img src="https://i.pinimg.com/1200x/b7/86/79/b786795a5bfba85a9d0422b015d2a460.jpg" width='60'
-                             alt=""/>
-                    </div>
-                    <div className="border border-gray-300 shadow-md p-3 rounded-xl">
-                        <i className="fa-brands text-blue-500 font-bold text-5xl fa-facebook"></i>
-                    </div>
-                </div>
-
-            </form>
-
-
-        </div>
+            </section>
+        </main>
     );
 }
 
